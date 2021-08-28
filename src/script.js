@@ -128,6 +128,7 @@ const doorWidth = 1
 const doorHeight = 1.5
 const doorGeometry = new THREE.PlaneGeometry(doorWidth, doorHeight)
 const doorGroup = new THREE.Group()
+const textureGroup = []
 
 // Entry Door
 const entryDoorTexture = new THREE.WebGLRenderTarget(1024, 1024, {
@@ -170,8 +171,12 @@ for (var x = (-hallwayWidth*0.5); x <= hallwayWidth*0.5; x+=hallwayWidth ) {
         var setX = x > 0 ? x-0.001 : x+0.001
         door.position.set(setX, doorHeight*0.5, z)
         door.rotation.y = x > 0 ? -Math.PI * 0.5 : Math.PI * 0.5
+        console.log(door)
         doorGroup.add(door)
+        textureGroup.push(doorTexture)
     }
+    console.log(doorGroup)
+    console.log(textureGroup)
     scene.add(doorGroup)
 }
 
@@ -323,14 +328,9 @@ const tick = () =>
     renderer.shadowMap.autoUpdate = false; // Avoid re-computing shadows
 
     // render the portal effect
-    // renderPortal( door1, entryDoor, door1Texture );
-    // renderPortal( door2, entryDoor, door2Texture );
-    // renderPortal( door3, entryDoor, door3Texture );
-    // renderPortal( door4, entryDoor, door4Texture );
-    // renderPortal( door5, entryDoor, door5Texture );
-    // renderPortal( door6, entryDoor, door6Texture );
-    // renderPortal( door7, entryDoor, door7Texture );
-    // renderPortal( door8, entryDoor, door8Texture );
+    for(var i = 0; i < doorsPerSide*2; i++) {
+        renderPortal(doorGroup.children[i], entryDoor, textureGroup[i])
+    }
     renderPortal( entryDoor, entryDoor, entryDoorTexture)
 
     // restore the original rendering properties
