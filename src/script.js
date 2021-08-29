@@ -11,6 +11,18 @@ import { Vector3 } from 'three';
  */
 const gui = new dat.GUI()
 
+
+/**
+ * Constants
+ */
+
+const hallwayLength = 10
+const hallwayWidth = 3
+const hallwayHeight = 2
+const doorWidth = 1
+const doorHeight = 1.5
+const doorsPerSide = 3
+
 /**
  * Textures
  */
@@ -42,12 +54,9 @@ const scene = new THREE.Scene()
 
 const axesHelper = new THREE.AxesHelper()
 scene.add(axesHelper)
+gui.add(axesHelper, 'visible').name('Axes Helper')
 
 //#region Hallway
-
-const hallwayLength = 8
-const hallwayWidth = 3
-const hallwayHeight = 2
 
 const hallway = new THREE.Group()
 const hallwayMaterial = new THREE.MeshMatcapMaterial({
@@ -114,7 +123,7 @@ const box = new THREE.Mesh(
         color: "#64e0aa"
     })
 )
-box.position.z = -2.5
+box.position.z = -(hallwayLength*0.25)
 box.position.y = 0.5
 hallway.add(box)
 
@@ -124,8 +133,6 @@ scene.add(hallway)
 
 //#region  Doors
 
-const doorWidth = 1
-const doorHeight = 1.5
 const doorGeometry = new THREE.PlaneGeometry(doorWidth, doorHeight)
 const doorGroup = new THREE.Group()
 const textureGroup = []
@@ -145,12 +152,12 @@ const entryDoor = new THREE.Mesh(
         map: entryDoorTexture.texture
     })
 )
+entryDoor.scale.set(1, 1, 1)
 entryDoor.position.y = doorHeight*0.5
 entryDoor.position.z = (hallwayLength*0.5)-0.001
 entryDoor.rotation.y = Math.PI
 scene.add(entryDoor)
 
-const doorsPerSide = 3
 const chunk = hallwayLength/(doorsPerSide+1)
 
 for (var x = (-hallwayWidth*0.5); x <= hallwayWidth*0.5; x+=hallwayWidth ) {
@@ -169,14 +176,12 @@ for (var x = (-hallwayWidth*0.5); x <= hallwayWidth*0.5; x+=hallwayWidth ) {
         )
         
         var setX = x > 0 ? x-0.001 : x+0.001
-        door.position.set(setX, doorHeight*0.5, z)
+        door.scale.set(0.8, 0.8, 0.8)
+        door.position.set(setX, (doorHeight*0.5) - 0.15, z)
         door.rotation.y = x > 0 ? -Math.PI * 0.5 : Math.PI * 0.5
-        console.log(door)
         doorGroup.add(door)
         textureGroup.push(doorTexture)
     }
-    console.log(doorGroup)
-    console.log(textureGroup)
     scene.add(doorGroup)
 }
 
@@ -189,8 +194,8 @@ scene.add(ambientLight)
 
 const pointLight = new THREE.PointLight(0xffffff, 0.5)
 pointLight.position.x = 0
-pointLight.position.y = 0
-pointLight.position.z = 0
+pointLight.position.y = 2
+pointLight.position.z = -0
 scene.add(pointLight)
 
 //#endregion Lights
@@ -228,6 +233,43 @@ camera.position.z = hallwayLength*0.25
 
 scene.add(camera)
 
+var direction = new THREE.Vector3(); // create once and reuse it!
+
+camera.getWorldDirection( direction );
+
+//Base camera controls
+document.addEventListener('keydown', (e) => {
+    console.log(e.code)
+    if (e.code == 'KeyW' || e.code == 'ArrowUp') {
+        camera.position.set(
+            camera.position.x + direction.x, 
+            camera.position.y + direction.y, 
+            camera.position.z + direction.z, )
+        camera.getWorldDirection( direction );
+    }
+    if (e.code == 'KeyA' || e.code == 'ArrowLeft') {
+        camera.rotation.y += Math.PI*0.25
+        camera.getWorldDirection( direction );
+    }
+    if (e.code == 'KeyD' || e.code == 'ArrowRight') {
+        camera.rotation.y -= Math.PI*0.25
+        camera.getWorldDirection( direction );
+    }
+    if (e.code == 'KeyS' || e.code == 'ArrowDown') {
+        camera.position.set(
+            camera.position.x - direction.x, 
+            camera.position.y - direction.y, 
+            camera.position.z - direction.z, )
+        camera.getWorldDirection( direction );
+    }
+    if (e.code == 'KeyQ') {
+        console.log(direction)
+        console.log(camera.rotation)
+        console.log(camera.position)
+    }
+})
+
+
 // Portal Camera
 const portalCamera = new THREE.PerspectiveCamera(45, sizes.width / sizes.height, 0.1, 100)
 
@@ -249,24 +291,24 @@ renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setClearColor("#4a4e69")
 
-const controls = new FirstPersonControls( camera, renderer.domElement );
-controls.movementSpeed = 0;
-controls.lookSpeed = 0;
-controls.lookAt(new Vector3(0, 1, 0))
+// const controls = new FirstPersonControls( camera, renderer.domElement );
+// controls.movementSpeed = 0.005;
+// controls.lookSpeed = 0.001;
+// controls.lookAt(new Vector3(0, 1, 0))
 
-document.addEventListener('keypress', (e) => {
-    if (e.code == 'KeyQ') {
-        controls.movementSpeed = 0
-        controls.lookSpeed = 0
-    } else {
-        controls.movementSpeed = 0.05;
-        controls.lookSpeed = 0.002;
-    }
-})
+// document.addEventListener('keypress', (e) => {
+//     if (e.code == 'KeyQ') {
+//         controls.movementSpeed = 0
+//         controls.lookSpeed = 0
+//     } else {
+//         controls.movementSpeed = 0.05;
+//         controls.lookSpeed = 0.002;
+//     }
+// })
 
 /**
  * Render Portals
- */
+*/
 
 function renderPortal( thisPortalMesh, otherPortalMesh, thisPortalTexture ) {
     // set the portal camera position to be reflected about the portal plane
@@ -277,9 +319,9 @@ function renderPortal( thisPortalMesh, otherPortalMesh, thisPortalTexture ) {
 
     // grab the corners of the other portal
     // - note: the portal is viewed backwards; flip the left/right coordinates
-    otherPortalMesh.localToWorld( bottomLeftCorner.set( 0.5, - 0.75, 0.0 ) );
-    otherPortalMesh.localToWorld( bottomRightCorner.set( - 0.5, - 0.75, 0.0 ) );
-    otherPortalMesh.localToWorld( topLeftCorner.set( 0.5, 0.75, 0.0 ) );
+    otherPortalMesh.localToWorld( bottomLeftCorner.set( doorWidth*0.5, -(doorHeight*0.5), 0.0 ) );
+    otherPortalMesh.localToWorld( bottomRightCorner.set( - (doorWidth*0.5), -(doorHeight*0.5), 0.0 ) );
+    otherPortalMesh.localToWorld( topLeftCorner.set( doorWidth*0.5, doorHeight*0.5, 0.0 ) );
     // set the projection matrix to encompass the portal's frame
     CameraUtils.frameCorners( portalCamera, bottomLeftCorner, bottomRightCorner, topLeftCorner, false );
 
@@ -293,6 +335,13 @@ function renderPortal( thisPortalMesh, otherPortalMesh, thisPortalTexture ) {
     thisPortalMesh.visible = true;
 }
 
+// var sampleTexture = new THREE.WebGLRenderTarget(1024, 1024, {
+//     minFilter: THREE.NearestFilter,
+//     magFilter: THREE.LinearFilter,
+//     format: THREE.RGBFormat
+// })
+
+// renderPortal(entryDoor, entryDoor, sampleTexture)
 /**
  * Animate
  */
@@ -302,9 +351,8 @@ const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
     
-
     // Update controls
-    controls.update(1)
+    //controls.update(1)
     // if (camera.position.x >= 1.3 || 
     //     camera.position.x <= -1.3 || 
     //     camera.position.z >= 3.8) {
@@ -328,10 +376,52 @@ const tick = () =>
     renderer.shadowMap.autoUpdate = false; // Avoid re-computing shadows
 
     // render the portal effect
-    for(var i = 0; i < doorsPerSide*2; i++) {
-        renderPortal(doorGroup.children[i], entryDoor, textureGroup[i])
+
+    // for (var i = 0; i < doorsPerSide*2; i++) {
+
+    //     for (var j = 0; j < doorsPerSide*2; j++) {
+    //         //newTextures.push(textureGroup[i])
+
+    //         //renderPortal(doorGroup.children[j], entryDoor, textureGroup[j])
+            
+    //         // entryDoor.localToWorld( bottomLeftCorner.set( doorWidth*0.5, -(doorHeight*0.5), 0.0 ) );
+    //         // entryDoor.localToWorld( bottomRightCorner.set( - (doorWidth*0.5), -(doorHeight*0.5), 0.0 ) );
+    //         // entryDoor.localToWorld( topLeftCorner.set( doorWidth*0.5, doorHeight*0.5, 0.0 ) );
+    //         // CameraUtils.frameCorners( portalCamera, bottomLeftCorner, bottomRightCorner, topLeftCorner, false );
+
+    //         // textureGroup[j].texture.encoding = renderer.outputEncoding
+    //         // renderer.setRenderTarget( textureGroup[j] );
+    //         // renderer.state.buffers.depth.setMask( true ); // make sure the depth buffer is writable so it can be properly cleared, see #18897
+    //         // if ( renderer.autoClear === false ) renderer.clear();
+    //         // doorGroup.children[j].visible = false;
+    //         // renderer.render( scene, portalCamera );
+    //         // doorGroup.children[j].visible = true;
+    //     }
+    //     newTextures.push(textureGroup[i])
+    // }
+
+    // for (var k = 0; k < doorsPerSide*2; k++) {
+    //     //console.log(doorGroup.children[k].material.map)
+    //     textureGroup[k] = newTextures[k]
+    //     textureGroup[k].texture.encoding = renderer.outputEncoding
+    //     renderer.setRenderTarget( textureGroup[k] );
+    //     renderer.state.buffers.depth.setMask( true ); // make sure the depth buffer is writable so it can be properly cleared, see #18897
+    //     if ( renderer.autoClear === false ) renderer.clear();
+    //     doorGroup.children[k].visible = false;
+    //     renderer.render( scene, portalCamera );
+    //     doorGroup.children[k].visible = true;
+    // }
+
+    var newTextures = []
+
+    for (var j = 0; j < doorsPerSide*2; j++) {
+        // for(var i = 0; i < doorsPerSide*2; i++) {
+        //     doorGroup.children[i].map = sampleTexture.texture
+        // }
+        renderPortal(doorGroup.children[j], entryDoor, textureGroup[j])
     }
-    renderPortal( entryDoor, entryDoor, entryDoorTexture)
+    
+    renderPortal( entryDoor, doorGroup.children[2], entryDoorTexture)
 
     // restore the original rendering properties
     renderer.xr.enabled = currentXrEnabled;
